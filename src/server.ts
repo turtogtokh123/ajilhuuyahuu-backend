@@ -76,10 +76,32 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 const HOST = '0.0.0.0'; // Required for Railway
 
 // Start server first, then connect to DB
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     console.log(`Health check available at /health`);
 });
+
+// Graceful shutdown handler
+const gracefulShutdown = (signal: string) => {
+    console.log(`\n${signal} received. Closing server gracefully...`);
+    server.close(() => {
+        console.log('Server closed');
+        mongoose.connection.close(false).then(() => {
+            console.log('MongoDB connection closed');
+            process.exit(0);
+        });
+    });
+
+    // Force close after 10 seconds if graceful shutdown hangs
+    setTimeout(() => {
+        console.error('Forcing shutdown after timeout');
+        process.exit(1);
+    }, 10000);
+};
+
+// Listen for termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Connect to MongoDB (with retry logic)
 const startDB = async () => {

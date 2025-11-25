@@ -1,42 +1,43 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICompany extends Document {
+    alias?: string;
     name: string;
-    description: string;
-    industry: 'Technology' | 'Finance' | 'Healthcare' | 'Education' | 'Retail' | 'Other';
-    location: string;
+    name_en?: string;
+    description?: string;
+    industry?: string; // Maps to branch_name from API
+    location?: string;
+    modified_logo?: string;
     averageRating?: number;
     createdAt: Date;
 }
 
 const CompanySchema: Schema = new Schema({
+    alias: {
+        type: String,
+        trim: true
+    },
     name: {
         type: String,
         required: [true, 'Please add a company name'],
-        unique: true,
-        trim: true,
-        maxlength: [50, 'Name can not be more than 50 characters']
+        trim: true
+    },
+    name_en: {
+        type: String,
+        trim: true
     },
     description: {
         type: String,
-        required: [true, 'Please add a description'],
         maxlength: [500, 'Description can not be more than 500 characters']
     },
     industry: {
-        type: String,
-        required: [true, 'Please add an industry'],
-        enum: [
-            'Technology',
-            'Finance',
-            'Healthcare',
-            'Education',
-            'Retail',
-            'Other'
-        ]
+        type: String
     },
     location: {
-        type: String,
-        required: [true, 'Please add a location']
+        type: String
+    },
+    modified_logo: {
+        type: String
     },
     averageRating: {
         type: Number,
