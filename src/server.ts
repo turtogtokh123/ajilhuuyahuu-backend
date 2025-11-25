@@ -72,44 +72,29 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     });
 });
 
-const PORT = parseInt(process.env.PORT || '5000', 10);
-const HOST = '0.0.0.0'; // Required for Railway
+const PORT = process.env.PORT || 5000;
 
-// Start server first, then connect to DB
-const server = app.listen(PORT, HOST, () => {
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI as string)
+    .then(() => console.log(`MongoDB Connected: ${mongoose.connection.host}`))
+    .catch((error) => {
+        console.error(`MongoDB Connection Error:`, error);
+        // Don't exit, let the server run even if DB fails initially
+    });
+
+// Start server
+app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     console.log(`Health check available at /health`);
 });
 
-// Graceful shutdown handler
-const gracefulShutdown = (signal: string) => {
-    console.log(`\n${signal} received. Closing server gracefully...`);
-    server.close(() => {
-        console.log('Server closed');
-        mongoose.connection.close(false).then(() => {
-            console.log('MongoDB connection closed');
-            process.exit(0);
-        });
-    });
+// Basic error handling for uncaught exceptions
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    // Keep running
+});
 
-    // Force close after 10 seconds if graceful shutdown hangs
-    setTimeout(() => {
-        console.error('Forcing shutdown after timeout');
-        process.exit(1);
-    }, 10000);
-};
-
-// Listen for termination signals
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-// Connect to MongoDB (with retry logic)
-const startDB = async () => {
-    const connected = await connectDB();
-    if (!connected) {
-        // Retry connection every 5 seconds
-        setTimeout(startDB, 5000);
-    }
-};
-
-startDB();
+process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+    // Keep running
+});
