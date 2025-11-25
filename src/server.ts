@@ -72,7 +72,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI as string)
