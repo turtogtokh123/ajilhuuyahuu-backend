@@ -34,11 +34,23 @@ const connectDB = async () => {
     try {
         const conn = await mongoose.connect(process.env.MONGO_URI as string);
         console.log(`MongoDB Connected: ${conn.connection.host}`);
+        return true;
     } catch (error) {
-        console.error(`Error: ${(error as Error).message}`);
-        process.exit(1);
+        console.error(`MongoDB Connection Error: ${(error as Error).message}`);
+        console.log('Will retry MongoDB connection in 5 seconds...');
+        return false;
     }
 };
+
+// Health check endpoint
+app.get('/health', (req: Request, res: Response) => {
+    const health = {
+        status: 'OK',
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    };
+    res.json(health);
+});
 
 // Routes
 app.get('/', (req: Request, res: Response) => {
@@ -62,9 +74,19 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Connect to DB and start server
-connectDB().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    });
+// Start server first, then connect to DB
+app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log(`Health check available at /health`);
 });
+
+// Connect to MongoDB (with retry logic)
+const startDB = async () => {
+    const connected = await connectDB();
+    if (!connected) {
+        // Retry connection every 5 seconds
+        setTimeout(startDB, 5000);
+    }
+};
+
+startDB();
