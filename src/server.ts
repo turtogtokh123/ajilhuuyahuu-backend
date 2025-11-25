@@ -11,6 +11,16 @@ import reviewRoutes from './routes/reviews';
 // Load environment variables
 dotenv.config();
 
+// Validate required environment variables
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+    console.error(`❌ Missing required environment variables: ${missingEnvVars.join(', ')}`);
+    console.error('Please set these variables in your Railway dashboard or .env file');
+    process.exit(1);
+}
+
 const app = express();
 
 // Trust proxy - Required for Vercel, Heroku, and other platforms behind proxies
@@ -28,19 +38,6 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api', limiter);
-
-// Database Connection
-const connectDB = async () => {
-    try {
-        const conn = await mongoose.connect(process.env.MONGO_URI as string);
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
-        return true;
-    } catch (error) {
-        console.error(`MongoDB Connection Error: ${(error as Error).message}`);
-        console.log('Will retry MongoDB connection in 5 seconds...');
-        return false;
-    }
-};
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
